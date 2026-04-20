@@ -1,0 +1,131 @@
+```mermaid
+graph TB
+    subgraph p14s["P14s Gen 2 — /home/nova — Ubuntu Server 24.04 LTS"]
+        subgraph systemd["systemd services (bare metal)"]
+            ollama_svc["ollama.service<br/>Port 11434<br/>Qwen 3B keep-alive<br/>Intel Xe accel"]
+            orch_svc["genesis-orchestrator.service<br/>Port 8000<br/>FastAPI + Python 3.12"]
+            watchdog_svc["genesis-watchdog.service<br/>Standalone Python<br/>Watches Sentinel"]
+            cmem_svc["claude-mem worker<br/>Port 37777<br/>bun runtime"]
+            caddy_svc["caddy.service<br/>Port 443<br/>HTTPS reverse proxy"]
+            tailscale_svc["tailscaled.service<br/>VPN mesh"]
+        end
+        
+        subgraph docker["Docker containers (isolation only)"]
+            mcp_imap["mcp-imap<br/>M365 IMAP adapter"]
+            mcp_bq["mcp-bigquery<br/>Schema + query"]
+            mcp_gh["mcp-github<br/>Repo access"]
+            mcp_ha["mcp-ha<br/>Home Assistant"]
+            mcp_mem["mcp-memory<br/>SQLite facts"]
+            paperclip_svc["paperclip<br/>Port 3100<br/>Phase 4+"]
+            postgres_svc["postgres (embedded)<br/>Paperclip state<br/>Phase 4+"]
+        end
+        
+        subgraph filesystem["Filesystem — LUKS encrypted"]
+            repos["/home/nova/<br/>├── genesis/ (public repo)<br/>└── genesis-config/ (private, git-crypt)"]
+            vardata["/var/lib/genesis/<br/>├── genesis.db (SQLite)<br/>├── genesis.db-wal<br/>└── staging/"]
+            varlog["/var/log/genesis/<br/>Application logs"]
+            claude_home["/home/nova/.claude/<br/>Claude Code state<br/>per-agent CLAUDE.md"]
+            cmem_home["/home/nova/.claude-mem/<br/>claude-mem SQLite<br/>observations"]
+            ollama_home["/home/nova/.ollama/<br/>Qwen 3B weights<br/>~3 GB"]
+        end
+        
+        subgraph subprocs["claude -p persistent subprocesses"]
+            isaac_proc["Isaac process<br/>cwd: /home/nova/projects"]
+            oracle_proc["Oracle process<br/>cwd: /home/nova/muvi-data"]
+            iris_proc["Iris process<br/>cwd: /home/nova/personal"]
+            sentinel_proc["Sentinel process<br/>cwd: /home/nova/ops"]
+        end
+    end
+    
+    subgraph external["External endpoints"]
+        gdrive_ext["Google Drive<br/>rclone crypt remote"]
+        github_ext["GitHub<br/>fareed-hameed/genesis<br/>fareed-hameed/genesis-config"]
+        cloudflare["Cloudflare DNS<br/>genesis.novahive.cloud"]
+        anthropic_ext["Anthropic API<br/>claude.ai OAuth Max"]
+    end
+    
+    orch_svc --> ollama_svc
+    orch_svc --> cmem_svc
+    orch_svc --> isaac_proc
+    orch_svc --> oracle_proc
+    orch_svc --> iris_proc
+    orch_svc --> sentinel_proc
+    
+    isaac_proc -.-> anthropic_ext
+    oracle_proc -.-> anthropic_ext
+    iris_proc -.-> anthropic_ext
+    sentinel_proc -.-> anthropic_ext
+    
+    isaac_proc --> mcp_gh
+    isaac_proc --> mcp_bq
+    oracle_proc --> mcp_bq
+    oracle_proc --> mcp_gh
+    iris_proc --> mcp_imap
+    iris_proc --> mcp_mem
+    sentinel_proc --> mcp_bq
+    
+    caddy_svc --> orch_svc
+    tailscale_svc --> caddy_svc
+    caddy_svc -.cert renewal.-> cloudflare
+    
+    orch_svc --> vardata
+    cmem_svc --> cmem_home
+    ollama_svc --> ollama_home
+    
+    vardata -.6h rclone.-> gdrive_ext
+    repos -.git push.-> github_ext
+    
+    watchdog_svc -.heartbeat check.-> sentinel_proc
+
+    classDef svcStyle fill:#e8f5e9,stroke:#2e7d32
+    classDef dockerStyle fill:#e3f2fd,stroke:#1976d2
+    classDef procStyle fill:#fff4e1,stroke:#cc6600
+    classDef fsStyle fill:#f3e5f5,stroke:#7b1fa2
+    classDef extStyle fill:#fce4ec,stroke:#c2185b
+    
+    class ollama_svc,orch_svc,watchdog_svc,cmem_svc,caddy_svc,tailscale_svc svcStyle
+    class mcp_imap,mcp_bq,mcp_gh,mcp_ha,mcp_mem,paperclip_svc,postgres_svc dockerStyle
+    class isaac_proc,oracle_proc,iris_proc,sentinel_proc procStyle
+    class repos,vardata,varlog,claude_home,cmem_home,ollama_home fsStyle
+    class gdrive_ext,github_ext,cloudflare,anthropic_ext extStyle
+```
+
+## Deployment notes
+
+### What runs bare metal vs Docker
+
+**Bare metal (systemd services):**
+- Services in the hot path of every request (orchestrator, Ollama, Caddy)
+- Services that benefit from direct hardware access (Ollama needs Intel Xe drivers)
+- The watchdog (zero dependencies, must survive Docker failures)
+- Services that manage persistent long-lived state (claude-mem worker)
+
+**Docker containers:**
+- MCP servers (isolation from untrusted external data parsing)
+- Paperclip (Phase 4+, convenient packaging)
+- Things that might crash and need fresh restart
+
+### Port allocation
+
+| Port | Service |
+|------|---------|
+| 22 | SSH (Tailscale-authenticated) |
+| 443 | Caddy HTTPS (public via Tailscale) |
+| 8000 | FastAPI orchestrator (localhost only, behind Caddy) |
+| 11434 | Ollama (localhost only) |
+| 37777 | claude-mem worker (localhost only) |
+| 3100 | Paperclip (Phase 4+, localhost) |
+
+Only 22 and 443 are exposed through Tailscale. Everything else is localhost-only.
+
+### Filesystem layout
+
+All writable state inside LUKS-encrypted partition. Key locations:
+- `/home/nova/genesis/` — public repo working copy
+- `/home/nova/genesis-config/` — private repo working copy (git-crypt)
+- `/var/lib/genesis/` — SQLite databases and message bus staging
+- `/home/nova/.claude/` — Claude Code state, per-agent CLAUDE.md
+- `/home/nova/.claude-mem/` — claude-mem SQLite + observations
+- `/home/nova/.ollama/` — Qwen 3B model weights
+
+Backups snapshot `/var/lib/genesis/` and `/home/nova/.claude-mem/` every 6 hours to Google Drive (encrypted via rclone crypt).

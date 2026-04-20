@@ -1,0 +1,92 @@
+```mermaid
+sequenceDiagram
+    actor Fareed
+    participant Browser as Browser (PWA)
+    participant WS as WebSocket
+    participant Orch as FastAPI Orchestrator
+    participant Qwen as Qwen 3B (attribution)
+    participant Bus as SQLite Message Bus
+    participant Isaac as I.S.A.A.C.
+    participant MCP as MCP Server (GitHub)
+    participant CMEM as claude-mem
+    participant Claude as Anthropic Claude API
+    
+    Note over Fareed,Claude: Fareed: "Isaac, refactor the staging models"
+    
+    Fareed->>Browser: Taps mic button
+    Browser->>Browser: Web Speech API transcribes
+    Browser->>WS: Send text via WebSocket
+    WS->>Orch: {"text": "Isaac, refactor the staging models"}
+    
+    Note over Orch: Generate trace_id for this request
+    
+    Orch->>Qwen: Parse agent name from text
+    Qwen-->>Orch: [{"agent": "isaac", "text": "refactor the staging models"}]
+    
+    Orch->>Bus: Write user message<br/>(user_verbatim, summary, trace_id)
+    Bus-->>Orch: message_id
+    
+    Note over Bus,Isaac: Hybrid push-poll: wake Isaac's asyncio.Event
+    
+    Bus->>Isaac: Wake notification
+    Isaac->>Bus: Atomic claim of pending message
+    Bus-->>Isaac: Full message content
+    
+    Isaac->>CMEM: Get session context<br/>(search past observations)
+    CMEM-->>Isaac: Compressed context:<br/>"Yesterday you worked on...<br/>Staging convention is stg_ prefix"
+    
+    Isaac->>Claude: claude -p with:<br/>- System prompt (CLAUDE.md)<br/>- User request<br/>- claude-mem context<br/>- Trace ID
+    
+    Note over Claude: Reasoning...
+    
+    Claude->>Isaac: Tool call: read_file(schema.md)
+    Isaac->>MCP: Execute tool via MCP
+    MCP-->>Isaac: File contents
+    Isaac->>Claude: Tool result
+    
+    Claude->>Isaac: Tool call: git.create_branch(staging-refactor)
+    Isaac->>MCP: Execute
+    MCP-->>Isaac: Branch created
+    Isaac->>Claude: Tool result
+    
+    Claude->>Isaac: Streaming response:<br/>"I've analyzed 12 models. Starting refactor..."
+    
+    Isaac->>Bus: Stream response events
+    Bus->>Orch: Notify (wake subscribers)
+    Orch->>WS: Stream events to browser
+    WS->>Browser: Live updates
+    Browser->>Fareed: xterm.js shows progress
+    
+    Note over Claude,Bus: (tool calls continue until complete)
+    
+    Claude->>Isaac: Final response + completion
+    Isaac->>Bus: Write completion message<br/>(trace_id linked)
+    Isaac->>CMEM: Record session observation<br/>(compressed summary)
+    
+    Note over Bus,Fareed: At 8 PM AST — automated
+    
+    Note over Isaac: Daily reflection cron fires
+    Isaac->>Bus: Query today's project logs
+    Bus-->>Isaac: All work from today
+    Isaac->>Claude: Generate reflection
+    Claude-->>Isaac: Reflection markdown
+    Isaac->>Isaac: Write to<br/>genesis-config/memory/<br/>agent-reflections/isaac_YYYY-MM-DD.md
+    Isaac->>Isaac: git commit + push
+```
+
+## Key observations from this flow
+
+### Trace IDs propagate end to end
+A single UUID attached at request start flows through every table: messages, events, tool_calls, cmem observations. Debugging is a matter of filtering by trace_id.
+
+### claude-mem is consulted before Claude
+Isaac queries claude-mem before sending to Claude API. This injects compressed historical context (yesterday's work, known conventions, relevant prior decisions) — saves context window, prevents relearning.
+
+### Tool calls are sandwiched in the API loop
+Claude's response is iterative: request → tool call → tool result → request → ... until done. Each tool call logs to `tool_calls` table with duration and success flag. This is where Sentinel sees agent behavior.
+
+### Reflections happen on a separate cron
+The 8 PM daily reflection is its own cycle — doesn't interrupt interactive work. Isaac generates his reflection by querying his day's logs, asking Claude to synthesize, committing to the genesis-config repo.
+
+### Nothing touches disk unsafely
+Every write is either: SQLite (atomic, transactional), git (commit + push), or Claude API (authenticated). No unencrypted state leaves the P14s.

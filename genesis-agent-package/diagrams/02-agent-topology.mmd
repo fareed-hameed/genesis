@@ -1,0 +1,70 @@
+```mermaid
+graph TB
+    user["👤 Fareed"]
+    
+    subgraph activeflow["ACTIVE FLOW — Direct Agent Addressing"]
+        isaac["I.S.A.A.C.<br/>🔧 Engineer<br/>he/him"]
+        oracle["O.R.A.C.L.E.<br/>📊 Data Analyst<br/>she/her"]
+        halo["H.A.L.O.<br/>🏠 Home Automation<br/>she/her"]
+    end
+    
+    subgraph hub["HUB — Iris as Chief of Staff"]
+        iris["I.R.I.S.<br/>📬 PA + PM + Continuity<br/>she/her<br/><br/>Default agent<br/>Passes reports between Fareed and team"]
+    end
+    
+    subgraph watcher["WATCHER"]
+        sentinel["S.E.N.T.I.N.E.L.<br/>👁️ Infrastructure + Agent monitor<br/>he/him<br/><br/>Does not interact directly with Fareed<br/>except P0 emergency"]
+    end
+    
+    user -.->|"'Isaac, build X'"| isaac
+    user -.->|"'Oracle, analyze Y'"| oracle
+    user -.->|"'Halo, lights off'"| halo
+    user <-->|"'what needs my attention?'<br/>PA work, PM coordination"| iris
+    user -.->|"'Sentinel, system status?'<br/>rare direct query"| sentinel
+    
+    isaac -->|project logs<br/>reflections| iris
+    oracle -->|project logs<br/>reflections| iris
+    halo -->|device events| iris
+    sentinel -->|all reports flow here| iris
+    
+    iris -->|delegates via ticket| isaac
+    iris -->|delegates via ticket| oracle
+    iris -->|direct API call| halo
+    
+    sentinel -.monitors.-> isaac
+    sentinel -.monitors.-> oracle
+    sentinel -.monitors.-> iris
+    sentinel -.monitors.-> halo
+    
+    sentinel -->|P0 only, bypass Iris<br/>Telegram direct| user
+    
+    classDef userStyle fill:#e1f5ff,stroke:#0066cc,stroke-width:3px
+    classDef hubStyle fill:#fff9c4,stroke:#f57f17,stroke-width:3px
+    classDef activeStyle fill:#fff4e1,stroke:#cc6600,stroke-width:2px
+    classDef watchStyle fill:#e0f2f1,stroke:#00695c,stroke-width:2px
+    
+    class user userStyle
+    class iris hubStyle
+    class isaac,oracle,halo activeStyle
+    class sentinel watchStyle
+```
+
+## Notes on the topology
+
+### Two distinct flows
+
+**Active flow** (solid arrows to/from Fareed): Fareed addresses agents by name for focused work. Isaac for engineering, Oracle for data analysis, Halo for home control. These are short, direct, task-focused interactions.
+
+**Passive flow** (through Iris): When Fareed isn't actively working, Iris is the continuity layer. She aggregates state from Sentinel, monitors the inbox, tracks calendar, and surfaces what matters. When Fareed checks in with "what do I need to know?", he asks Iris.
+
+### Iris as hub
+
+Iris is not above the other agents — she's the coordination layer. Isaac, Oracle, and Halo are peer specialists. Sentinel reports to Iris for filtering. Iris delegates work between agents in PM mode.
+
+### Sentinel's unique position
+
+Sentinel does not speak to Fareed directly in normal operation. All his findings flow to Iris, who decides what Fareed needs to know. The exception is P0 emergencies when Iris has been unreachable for 10+ minutes — then Sentinel pages Fareed directly via Telegram, bypassing the normal chain.
+
+### Halo's simplicity
+
+Halo is the only agent without Claude. She executes voice commands against Home Assistant in sub-second Python keyword matching. She reports device events to Iris (so Iris knows the home state) but does no reasoning.

@@ -1,0 +1,121 @@
+```mermaid
+graph TB
+    subgraph clients["Client Devices (any network)"]
+        phone["Samsung S26 Ultra<br/>(Tailscale + browser)"]
+        work["X1 Carbon<br/>(Tailscale + browser)"]
+        future["Meta Glasses<br/>(Phase 7+, future)"]
+    end
+
+    subgraph network["Network Layer"]
+        tailscale["Tailscale VPN Mesh<br/>MagicDNS + TLS"]
+        caddy["Caddy Reverse Proxy<br/>genesis.novahive.cloud<br/>HTTPS via Cloudflare DNS-01"]
+    end
+
+    subgraph p14s["P14s Gen 2 — Sole Server"]
+        portal["React PWA Portal<br/>xterm.js terminal view<br/>WebSocket streaming"]
+        orchestrator["FastAPI Orchestrator<br/>Python 3.12<br/>Port 8000"]
+        bus["SQLite Message Bus<br/>WAL mode<br/>Atomic claim"]
+        
+        subgraph agents["Named Agents (5)"]
+            isaac["I.S.A.A.C.<br/>Engineer<br/>claude -p persistent"]
+            oracle["O.R.A.C.L.E.<br/>Data Analyst<br/>claude -p persistent"]
+            iris["I.R.I.S.<br/>PA + PM + Hub<br/>claude -p persistent"]
+            sentinel["S.E.N.T.I.N.E.L.<br/>Watcher<br/>claude -p persistent"]
+            halo["H.A.L.O.<br/>Home Automation<br/>Python + HA API<br/>NO Claude"]
+        end
+        
+        subgraph local["Local Services"]
+            qwen["Qwen 3B via Ollama<br/>Intel Xe accelerated<br/>Attribution"]
+            claudemem["claude-mem Worker<br/>Port 37777<br/>Session compression"]
+            watchdog["Watchdog<br/>Systemd service<br/>50-line zero-dep"]
+        end
+        
+        subgraph storage["Storage"]
+            sqlite[("SQLite<br/>genesis.db<br/>LUKS encrypted")]
+            markdown[("Markdown Memory<br/>genesis-config repo<br/>git-crypt encrypted")]
+        end
+        
+        subgraph mcpservers["MCP Servers (Docker)"]
+            mcp_imap["IMAP MCP<br/>M365 read + draft"]
+            mcp_bq["BigQuery MCP<br/>Schema-scoped"]
+            mcp_gh["GitHub MCP<br/>Repo-scoped"]
+            mcp_ha["Home Assistant MCP"]
+            mcp_paperclip["Paperclip MCP<br/>Phase 4+"]
+        end
+    end
+
+    subgraph external["External Services"]
+        m365["Microsoft 365<br/>(MUVI tenant)<br/>IMAP only"]
+        bq["Google BigQuery<br/>MUVI datasets"]
+        github["GitHub<br/>genesis + muvi repos"]
+        ha["Home Assistant<br/>Local network"]
+        gdrive["Google Drive<br/>Encrypted backups"]
+        anthropic["Anthropic Claude API<br/>Max subscription<br/>OAuth-authenticated"]
+    end
+
+    phone --> tailscale
+    work --> tailscale
+    future --> tailscale
+    
+    tailscale --> caddy
+    caddy --> portal
+    portal --> orchestrator
+    
+    orchestrator --> bus
+    orchestrator --> qwen
+    orchestrator --> claudemem
+    
+    isaac --> bus
+    oracle --> bus
+    iris --> bus
+    sentinel --> bus
+    halo --> bus
+    
+    isaac --> claudemem
+    oracle --> claudemem
+    iris --> claudemem
+    sentinel --> claudemem
+    
+    isaac -.-> anthropic
+    oracle -.-> anthropic
+    iris -.-> anthropic
+    sentinel -.-> anthropic
+    
+    iris --> mcp_imap
+    iris --> mcp_paperclip
+    oracle --> mcp_bq
+    oracle --> mcp_gh
+    isaac --> mcp_gh
+    isaac --> mcp_bq
+    sentinel --> mcp_bq
+    halo --> mcp_ha
+    
+    mcp_imap --> m365
+    mcp_bq --> bq
+    mcp_gh --> github
+    mcp_ha --> ha
+    
+    bus --> sqlite
+    bus --> markdown
+    
+    sqlite -.->|6h snapshots<br/>rclone crypt| gdrive
+    markdown -.->|git push| github
+    
+    watchdog -.watches.-> sentinel
+    sentinel -.monitors.-> isaac
+    sentinel -.monitors.-> oracle
+    sentinel -.monitors.-> iris
+    sentinel -.monitors.-> halo
+
+    classDef userStyle fill:#e1f5ff,stroke:#0066cc,stroke-width:2px
+    classDef agentStyle fill:#fff4e1,stroke:#cc6600,stroke-width:2px
+    classDef localStyle fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px
+    classDef storageStyle fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
+    classDef externalStyle fill:#fce4ec,stroke:#c2185b,stroke-width:2px
+    
+    class phone,work,future userStyle
+    class isaac,oracle,iris,sentinel,halo agentStyle
+    class qwen,claudemem,watchdog,orchestrator,portal localStyle
+    class sqlite,markdown,bus storageStyle
+    class m365,bq,github,ha,gdrive,anthropic externalStyle
+```
