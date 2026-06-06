@@ -87,14 +87,6 @@ FINDINGS = [
     ("Experimental Design — Small, dated clinical benchmark", "Minor",
      "The UCI Cleveland Heart dataset (303 instances) is small and heavily reused, limiting external validity and statistical power for the SFR conclusions.",
      "Add a larger and more contemporary clinical dataset to strengthen external validity for the semantic regime."),
-
-    ("Editorial — Duplicated sentences and language errors", "Minor",
-     "Several passages contain near-verbatim duplicated sentences (the abstract repeats the DAEA/XAI-DSS sentence; Section 1 has \"Third… Third…\"; Sections 2.5 and 3.3 repeat content) and typos appear (\"eexperiments,\" \"diwarnsent,\" \"boostrap\"). This level of editing is below Q2 expectations and signals insufficient proofreading.",
-     "Perform a thorough professional language edit; remove all duplicated sentences and typos before resubmission."),
-
-    ("Editorial — Equations not typeset", "Minor",
-     "Equations (1)–(3) appear as empty/placeholder lines (e.g., the general predictive mapping and the logistic posterior are blank). Several symbols are referenced without rendering.",
-     "Properly typeset all equations and define every symbol; verify they survive PDF conversion."),
 ]
 
 doc = docx.Document()
