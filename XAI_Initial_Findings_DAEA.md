@@ -2,7 +2,7 @@
 
 **Domain-Adaptive Explainable AI Framework for Big Data–Driven Decision Support Systems (DAEA / XAI-DSS)**
 
-*Pre-submission due-diligence review against Scopus Q2 expectations. Findings are ordered by severity (Critical → Major → Minor). Each item references concrete evidence from the manuscript tables/sections.*
+*Pre-submission due-diligence review against Scopus Q2 expectations. Lists publication blockers only (Critical → Major). Each item references concrete evidence from the manuscript tables/sections.*
 
 | # | Issue Type | Impact | Issue Details | Recommendation |
 |---|------------|--------|---------------|----------------|
@@ -23,6 +23,3 @@
 | 15 | Experimental Design — Anecdotal validation | **Major** | SFR contrastive evidence is a single patient; "clinical benchmarking" is consistency with general AHA knowledge. No clinician review, user study, or systematic evaluation backs the utility claims. | Add expert (clinician/fraud-analyst) validation or a human-subjects usability study, or downgrade utility claims to illustrative. |
 | 16 | Novelty & Positioning — Thin basis for "first/no prior work" | **Major** | Strong primacy claims rest on a 5-study comparison table with no systematic-review methodology, risking missed prior art. | Add a systematic-review protocol (search strings, databases, inclusion/exclusion, PRISMA flow) and broaden the comparator set. |
 | 17 | Reproducibility — Missing artifacts and tuning protocol | **Major** | No code/data availability statement, no seeds, no library/version reporting; hyperparameters are fixed values with no described tuning/validation. | Provide a public repo, fixed seeds, software environment, and a documented hyperparameter-search protocol with validation evidence. |
-| 18 | Calibration Methodology — SMOTE×calibration interaction unaddressed | **Minor** | Training on SMOTE-resampled data distorts base rates/raw probabilities. The calibration set is held out and unresampled (good), but the interaction with operating thresholds on the true imbalanced distribution is not analysed. | Discuss/validate the SMOTE×calibration interaction; compare to class-weighting (no resampling); confirm calibration is evaluated on the natural prior. |
-| 19 | Scope — Binary regime oversimplification | **Minor** | Real datasets mix semantic and abstract/engineered features; a hard binary AFR/SFR will misclassify mixed datasets. Continuous scoring is only future work, limiting current generalisability. | Acknowledge prominently and, ideally, demonstrate behaviour on a mixed-feature dataset. |
-| 20 | Experimental Design — Small, dated clinical benchmark | **Minor** | UCI Cleveland Heart (303 instances) is small and heavily reused, limiting external validity and power for SFR conclusions. | Add a larger, more contemporary clinical dataset for the semantic regime. |

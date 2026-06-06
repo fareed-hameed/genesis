@@ -76,17 +76,6 @@ FINDINGS = [
      "There is no code/data availability statement, no random seeds, no library/version reporting, and hyperparameters are stated as fixed values with no described tuning/validation procedure (e.g., no grid/Bayesian search or validation curves).",
      "Provide a public code repository, fixed seeds, software environment, and a documented hyperparameter-search protocol with validation evidence."),
 
-    ("Calibration Methodology — SMOTE×calibration interaction unaddressed", "Minor",
-     "Training on SMOTE-resampled data distorts base rates and raw probability outputs. Although the calibration set is held out and unresampled (good), the interaction between resampling, calibration, and operating thresholds on the true (imbalanced) distribution is not analysed.",
-     "Discuss/validate the SMOTE×calibration interaction; compare against class-weighting (no resampling) and confirm calibration is evaluated on the natural class prior."),
-
-    ("Scope — Binary regime oversimplification", "Minor",
-     "Real datasets routinely mix semantically rich and abstract/engineered features; a hard binary AFR/SFR assignment will misclassify such mixed datasets. The paper notes continuous regime scoring only as future work, which limits the generalisability of the current claims.",
-     "Acknowledge the limitation prominently and, ideally, demonstrate behaviour on at least one mixed-feature dataset."),
-
-    ("Experimental Design — Small, dated clinical benchmark", "Minor",
-     "The UCI Cleveland Heart dataset (303 instances) is small and heavily reused, limiting external validity and statistical power for the SFR conclusions.",
-     "Add a larger and more contemporary clinical dataset to strengthen external validity for the semantic regime."),
 ]
 
 doc = docx.Document()
@@ -104,7 +93,7 @@ doc.add_paragraph(
 note = doc.add_paragraph()
 r = note.add_run(
     "Pre-submission due-diligence review against Scopus Q2 expectations. "
-    "Findings are ordered by severity (Critical → Major → Minor). "
+    "Lists publication blockers only (Critical → Major). "
     "Each item references concrete evidence from the manuscript tables/sections."
 )
 r.italic = True
